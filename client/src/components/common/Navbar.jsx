@@ -1,4 +1,7 @@
 // src/components/common/Navbar.jsx
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Bell, MonitorPlay, Trophy } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -16,6 +19,16 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext"; // Import Auth
 import "./Navbar.css";
 
+import logo from "../assets/EduhackTech.jpeg"; // correct path
+
+const Navbar = () => {
+  const { mode, toggleMode, primary, bgLight } = useTheme();
+  const navigate = useNavigate();
+
+  const handleModeToggle = () => {
+    toggleMode();
+    if (mode === "learning") navigate("/competition");
+    else navigate("/learning");
 import logo from "../assets/EduhackTech.jpeg";
 
 const Navbar = () => {
@@ -62,7 +75,10 @@ const Navbar = () => {
           
           {/* LEFT — Logo */}
           <div className="flex items-center min-w-fit">
-            <Link to="/" className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="flex items-center gap-3 hover:opacity-90 transition"
+            >
               <img
                 src={logo}
                 alt="EduHackTech Logo"
@@ -97,6 +113,8 @@ const Navbar = () => {
             
             {/* Mode Toggle */}
             <button
+              onClick={handleModeToggle}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${bgLight} border-gray-200 hover:shadow-md`}
               onClick={toggleMode}
               className={`flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border transition-all duration-300 ${bgLight} border-gray-200 hover:shadow-md active:scale-95`}
             >
