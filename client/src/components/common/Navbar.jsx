@@ -90,12 +90,13 @@ const Navbar = () => {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  // Search Logic
-  const [searchQuery, setSearchQuery] = useState("");
+  /* Mobile Search State */
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const handleSearch = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      setIsMobileSearchOpen(false); // Close on search
       if (mode === "learning") {
         navigate(`/learning?search=${encodeURIComponent(searchQuery)}`);
       } else {
@@ -237,6 +238,15 @@ const Navbar = () => {
                   </span>
                 </>
               )}
+            </button>
+
+
+            {/* Mobile Search Toggle */}
+            <button
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className="md:hidden p-2 rounded-full hover:bg-gray-100 transition text-gray-600 focus:outline-none"
+            >
+              <Search className="h-5 w-5" />
             </button>
 
             {/* Notification Dropdown */}
@@ -462,6 +472,28 @@ const Navbar = () => {
             )}
           </div>
         </div>
+
+        {/* Mobile Search Bar Overlay */}
+        {isMobileSearchOpen && (
+          <div className="md:hidden py-3 px-2 pb-4 animate-in slide-in-from-top-2 border-t border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all text-sm"
+                placeholder={
+                  mode === "learning"
+                    ? "Search courses..."
+                    : "Search hackathons..."
+                }
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -4,6 +4,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { ArrowRight, Loader2, User, Key, Mail, ShieldCheck } from 'lucide-react';
 import Logo from '../../../components/assets/EduhackTech.jpeg';
 
+import API_CONFIG from '../../../services/api.config';
+
 const Login = () => {
     const { loginUser } = useAuth();
     const navigate = useNavigate();
@@ -24,7 +26,7 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/check-email', {
+            const res = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.checkEmail}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -50,7 +52,7 @@ const Login = () => {
 
     // Helper: Send OTP
     const sendOtpToUser = async () => {
-        await fetch('http://localhost:5000/api/auth/send-otp', {
+        await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.sendOtp}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -72,7 +74,7 @@ const Login = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:5000/api/auth/login-otp', {
+            const res = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.login}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })
@@ -97,7 +99,7 @@ const Login = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:5000/api/auth/register', {
+            const res = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.register}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, otp })
