@@ -131,7 +131,7 @@ const Learning = () => {
       <section className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
         <div className="max-w-7xl mx-auto px-6 py-14 grid md:grid-cols-2 gap-10 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold">
+            <h1 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg">
               Upgrade Your Skills 🚀
             </h1>
             <p className="mt-4 text-blue-100 text-lg">
