@@ -3,10 +3,10 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 
-// Components
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+
 import LandingPage from "./modules/landing/LandingPage";
 import Login from "./modules/auth/pages/Login";
 import Learning from "./modules/learning/learning";
@@ -17,7 +17,6 @@ import OrganizeHackathon from "./modules/competition/pages/OrganizeHackathon";
 import HackathonDetail from "./modules/competition/pages/HackathonDetail";
 import PaymentPage from "./modules/learning/pages/PaymentPage";
 
-// Admin Pages
 import AdminDashboard from "./modules/admin/pages/AdminDashboard";
 import ManageCourses from "./modules/admin/pages/ManageCourses";
 import ManageEvents from "./modules/admin/pages/ManageEvents";
@@ -26,11 +25,12 @@ import ManageUsers from "./modules/admin/pages/ManageUsers";
 import ManageChallenges from "./modules/admin/pages/ManageChallenges";
 import CreateChallenge from "./modules/competition/pages/CreateChallenge";
 
-// Wrapper to hide Navbar on Login and Admin pages
 const Layout = ({ children }) => {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/login" || location.pathname.startsWith("/admin");
-  const hideFooter = location.pathname === "/login" || location.pathname.startsWith("/admin");
+  const hideNavbar =
+    location.pathname === "/login" || location.pathname.startsWith("/admin");
+  const hideFooter =
+    location.pathname === "/login" || location.pathname.startsWith("/admin");
 
   return (
     <>
@@ -48,15 +48,14 @@ function App() {
         <BrowserRouter>
           <Layout>
             <Routes>
-              {/* Home shows Learning */}
+              {/* HOME */}
               <Route path="/" element={<Learning />} />
-
-              {/* Learning */}
               <Route path="/learning" element={<Learning />} />
 
+              {/* AUTH */}
               <Route path="/login" element={<Login />} />
 
-              {/* Competition */}
+              {/* COMPETITION */}
               <Route path="/competition" element={<HackathonList />} />
               <Route path="/competition/organize" element={
                 <ProtectedRoute>
@@ -70,10 +69,10 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Old Landing (Optional) */}
+              {/* LANDING */}
               <Route path="/landing" element={<LandingPage />} />
 
-              {/* Course Detail */}
+              {/* LEARNING FLOW */}
               <Route path="/course/:id" element={<CoursePage />} />
               <Route path="/course/:id/learn" element={<CoursePlayer />} />
               <Route path="/payment/:id" element={<PaymentPage />} />
