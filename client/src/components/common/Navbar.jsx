@@ -90,6 +90,20 @@ const Navbar = () => {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  // Search Logic
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (mode === "learning") {
+        navigate(`/learning?search=${encodeURIComponent(searchQuery)}`);
+      } else {
+        navigate(`/competition?search=${encodeURIComponent(searchQuery)}`);
+      }
+    }
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -184,6 +198,9 @@ const Navbar = () => {
               </div>
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
                 className="block w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 border border-transparent focus:border-blue-500/50 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all text-sm"
                 placeholder={
                   mode === "learning"
@@ -275,17 +292,17 @@ const Navbar = () => {
                             key={notification.id}
                             onClick={() => markAsRead(notification.id)}
                             className={`group relative px-5 py-4 border-b border-gray-50/50 hover:bg-white/60 cursor-pointer transition-all duration-200 ${!notification.isRead
-                                ? "bg-blue-50/30"
-                                : ""
+                              ? "bg-blue-50/30"
+                              : ""
                               }`}
                           >
                             <div className="flex gap-3">
                               {/* Icon */}
                               <div className={`flex-shrink-0 p-2 rounded-xl ${notification.type === "success"
-                                  ? "bg-emerald-50"
-                                  : notification.type === "warning"
-                                    ? "bg-amber-50"
-                                    : "bg-blue-50"
+                                ? "bg-emerald-50"
+                                : notification.type === "warning"
+                                  ? "bg-amber-50"
+                                  : "bg-blue-50"
                                 }`}>
                                 {getNotificationIcon(notification.type)}
                               </div>

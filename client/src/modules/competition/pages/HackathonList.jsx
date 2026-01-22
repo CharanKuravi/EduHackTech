@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Calendar, Trophy, Users, ArrowRight, Tag, Filter, Plus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getEvents } from '../../../services/event.service';
 import { useAuth } from '../../../context/AuthContext';
 
 const HackathonList = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [searchParams] = useSearchParams();
     const [hackathons, setHackathons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+
+    // Update local search state if URL param changes
+    useEffect(() => {
+        const query = searchParams.get('search');
+        if (query) {
+            setSearchTerm(query);
+        }
+    }, [searchParams]);
 
     // Carousel State
     const [currentSlide, setCurrentSlide] = useState(0);

@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Search, BookOpen, Star, Clock, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCourses } from "../../services/course.service";
 
 /* ✅ COURSE BANNER IMAGES (CAROUSEL) */
 const sliderImages = [
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
-  "https://images.unsplash.com/photo-1519389950473-47ba0277781c",
-  "https://images.unsplash.com/photo-1531482615713-2afd69097998",
-  "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
-  "https://images.unsplash.com/photo-1518779578993-ec3579fee39f",
-  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
+  "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2070&auto=format&fit=crop", // Coding screen
+  "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop", // Modern workspace
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop", // Collaboration
+  "https://images.unsplash.com/photo-1531297461136-82lw4227781b?q=80&w=2067&auto=format&fit=crop", // Tech abstract
 ];
 
 // Fallback dummy course
@@ -44,10 +42,19 @@ const mapCourseData = (course) => ({
 const Learning = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
   const [active, setActive] = useState("All");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [slide, setSlide] = useState(0);
   const navigate = useNavigate();
+
+  // Update local search state if URL param changes
+  useEffect(() => {
+    const query = searchParams.get("search");
+    if (query) {
+      setSearch(query);
+    }
+  }, [searchParams]);
 
   const categories = [
     "All",
@@ -128,14 +135,43 @@ const Learning = () => {
   return (
     <div className="bg-slate-50 min-h-screen">
       {/* ===== HERO ===== */}
-      <section className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-14 grid md:grid-cols-2 gap-10 items-center">
+      {/* ===== HERO WITH ANIMATED GRADIENT CAROUSEL ===== */}
+      <section className="relative overflow-hidden text-white">
+        {/* Animated Gradient Backgrounds */}
+        {[
+          "from-blue-600 via-indigo-600 to-purple-600",
+          "from-indigo-600 via-purple-600 to-blue-600",
+          "from-purple-600 via-blue-600 to-indigo-600",
+          "from-blue-700 via-cyan-600 to-indigo-600",
+        ].map((gradient, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 bg-gradient-to-r ${gradient} transition-opacity duration-1000 ease-in-out ${index === slide % 4 ? "opacity-100" : "opacity-0"
+              }`}
+          />
+        ))}
+
+        {/* Animated Orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-20%] left-[10%] w-[400px] h-[400px] bg-white/10 rounded-full blur-[100px] animate-pulse"></div>
+          <div
+            className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-indigo-300/20 rounded-full blur-[100px] animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
+          <div
+            className="absolute top-[50%] left-[50%] w-[300px] h-[300px] bg-purple-300/10 rounded-full blur-[80px] animate-pulse"
+            style={{ animationDelay: "2s" }}
+          ></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-14 grid md:grid-cols-2 gap-10 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg">
-              Upgrade Your Skills 🚀
+            <h1 className="text-4xl md:text-5xl font-extrabold drop-shadow-lg leading-tight">
+              Master In-Demand <br /> Tech Skills 🚀
             </h1>
-            <p className="mt-4 text-blue-100 text-lg">
-              Learn industry‑ready skills and compete in real hackathons.
+            <p className="mt-4 text-blue-100 text-lg max-w-lg">
+              From full-stack development to AI, build projects and advance your career with our project-based learning paths.
             </p>
 
             <div className="mt-6 relative max-w-md">
@@ -186,11 +222,10 @@ const Learning = () => {
             <button
               key={cat}
               onClick={() => setActive(cat)}
-              className={`px-6 py-2 rounded-full font-semibold transition ${
-                active === cat
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "bg-white border hover:bg-gray-100"
-              }`}
+              className={`px-6 py-2 rounded-full font-semibold transition ${active === cat
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-white border hover:bg-gray-100"
+                }`}
             >
               {cat}
             </button>
