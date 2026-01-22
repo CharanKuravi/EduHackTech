@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -6,11 +5,13 @@ import { AuthProvider } from "./context/AuthContext";
 
 // Components
 import Navbar from "./components/common/Navbar";
+import Footer from "./components/common/Footer";
 import LandingPage from "./modules/landing/LandingPage";
 import Login from "./modules/auth/pages/Login";
 import Learning from "./modules/learning/learning";
 import CoursePage from "./modules/learning/coursepage";
 import Payment from "./modules/learning/payment";
+import HackathonList from "./modules/competition/pages/HackathonList";
 
 // Wrapper to hide Navbar on Login page
 const Layout = ({ children }) => {
@@ -21,6 +22,7 @@ const Layout = ({ children }) => {
     <>
       {!hideNavbar && <Navbar />}
       {children}
+      {!hideNavbar && <Footer />}
     </>
   );
 };
@@ -32,19 +34,21 @@ function App() {
         <BrowserRouter>
           <Layout>
             <Routes>
-              {/* HOME -> Learning */}
+              {/* Home shows Learning */}
               <Route path="/" element={<Learning />} />
 
-              {/* Learning Page */}
+              {/* ✅ THIS WAS MISSING */}
               <Route path="/learning" element={<Learning />} />
 
-              {/* Login */}
               <Route path="/login" element={<Login />} />
 
-              {/* Optional Landing */}
+              {/* Competition */}
+              <Route path="/competition" element={<HackathonList />} />
+
+              {/* Old Landing (Optional) */}
               <Route path="/landing" element={<LandingPage />} />
 
-              {/* Course Detail Page */}
+              {/* Course Detail */}
               <Route path="/course/:id" element={<CoursePage />} />
 
               {/* ✅ Payment Page (REQUIRES ID) */}
