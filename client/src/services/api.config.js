@@ -32,13 +32,16 @@ const API_CONFIG = {
             updateContent: (id) => `/courses/admin/${id}/content`,
         },
         // Events
+        // Events
         events: {
             list: '/events',
             single: (id) => `/events/${id}`,
             adminList: '/events/admin/all',
-            adminCreate: '/events/admin',
-            adminUpdate: (id) => `/events/admin/${id}`,
-            adminDelete: (id) => `/events/admin/${id}`,
+            create: '/events',
+            update: (id) => `/events/${id}`,
+            delete: (id) => `/events/${id}`,
+            register: (id) => `/events/${id}/register`,
+            registrations: (id) => `/events/${id}/registrations`,
         },
     },
 };

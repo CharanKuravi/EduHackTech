@@ -1,56 +1,16 @@
-import React, { useState } from 'react';
-import { Search, MapPin, Calendar, Trophy, Users, ArrowRight, Tag, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const MOCK_HACKATHONS = [
-    {
-        id: 1,
-        title: "EcoCode 2026",
-        description: "Build sustainable tech solutions for a greener future.",
-        date: "Feb 15 - Feb 17, 2026",
-        status: "Live", // Live, Upcoming, Past
-        prize: "$10,000",
-        tags: ["Sustainability", "AI", "Open Source"],
-        image: "bg-gradient-to-br from-green-400 to-emerald-600",
-        participants: 450
-    },
-    {
-        id: 2,
-        title: "FinTech Revolution",
-        description: "Reimagine the future of finance with blockchain and secure systems.",
-        date: "Mar 01 - Mar 03, 2026",
-        status: "Upcoming",
-        prize: "$25,000",
-        tags: ["Blockchain", "Finance", "Security"],
-        image: "bg-gradient-to-br from-blue-500 to-indigo-600",
-        participants: 120
-    },
-    {
-        id: 3,
-        title: "HealthHacks v4.0",
-        description: "Innovating healthcare accessibility using modern web technologies.",
-        date: "Mar 10 - Mar 12, 2026",
-        status: "Upcoming",
-        prize: "$15,000",
-        tags: ["Healthcare", "IoT", "Mobile"],
-        image: "bg-gradient-to-br from-rose-400 to-pink-600",
-        participants: 89
-    },
-    {
-        id: 4,
-        title: "EduHack Global",
-        description: "Create tools to make education accessible for everyone, everywhere.",
-        date: "Jan 20 - Jan 22, 2026",
-        status: "Past",
-        prize: "$5,000",
-        tags: ["Education", "EdTech", "Global"],
-        image: "bg-gradient-to-br from-yellow-400 to-orange-500",
-        participants: 1200
-    }
-];
+import React, { useState, useEffect } from 'react';
+import { Search, MapPin, Calendar, Trophy, Users, ArrowRight, Tag, Filter, Plus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getEvents } from '../../../services/event.service';
+import { useAuth } from '../../../context/AuthContext';
 
 const HackathonList = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [hackathons, setHackathons] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Carousel State
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -60,16 +20,34 @@ const HackathonList = () => {
         "from-slate-900 via-cyan-900 to-slate-900"    // Deep Cyan
     ];
 
-    React.useEffect(() => {
+    useEffect(() => {
+        const fetchHackathons = async () => {
+            setLoading(true);
+            try {
+                const data = await getEvents();
+                if (data && Array.isArray(data)) {
+                    setHackathons(data);
+                } else if (data && data.data) {
+                    setHackathons(data.data);
+                }
+            } catch (error) {
+                console.error("Failed to load hackathons", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchHackathons();
+
         const interval = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
         }, 5000);
         return () => clearInterval(interval);
     }, []);
 
-    const filteredHackathons = MOCK_HACKATHONS.filter(h => {
-        if (filter === 'All') return true;
-        return h.status === filter;
+    const filteredHackathons = hackathons.filter(h => {
+        const matchesFilter = filter === 'All' || (h.status && h.status.toLowerCase() === filter.toLowerCase());
+        const matchesSearch = h.title.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesFilter && matchesSearch;
     });
 
     return (
@@ -115,6 +93,8 @@ const HackathonList = () => {
                             <Search className="ml-4 text-slate-400" size={20} />
                             <input
                                 type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search for hackathons..."
                                 className="w-full bg-transparent text-white px-4 py-2 focus:outline-none placeholder-slate-500"
                             />
@@ -135,88 +115,98 @@ const HackathonList = () => {
                         <Calendar className="text-indigo-400" /> Upcoming Events
                     </h2>
 
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                        {['All', 'Live', 'Upcoming', 'Past'].map((f) => (
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                            {['All', 'Live', 'Upcoming', 'Past'].map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filter === f
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                                        : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/5'
+                                        }`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+
+                        {user && (
                             <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filter === f
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
-                                    : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/5'
-                                    }`}
+                                onClick={() => navigate('/competition/organize')}
+                                className="px-4 py-2 rounded-full bg-green-600 text-white font-semibold hover:bg-green-700 transition flex items-center gap-2 whitespace-nowrap"
                             >
-                                {f}
+                                <Plus size={18} /> Organize
                             </button>
-                        ))}
-                        <button className="px-4 py-2 rounded-full bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2 text-sm font-medium">
-                            <Filter size={16} /> Filters
-                        </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredHackathons.map((hackathon) => (
-                        <div key={hackathon.id} className="group relative bg-[#0f172a] border border-white/5 rounded-3xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-900/20 hover:-translate-y-1">
+                {loading ? (
+                    <div className="text-center py-20 text-slate-400">Loading hackathons...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {filteredHackathons.map((hackathon) => (
+                            <div key={hackathon._id} className="group relative bg-[#0f172a] border border-white/5 rounded-3xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-900/20 hover:-translate-y-1">
 
-                            {/* Image / Banner */}
-                            <div className={`h-40 w-full ${hackathon.image} p-6 relative overflow-hidden`}>
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                                {/* Image / Banner */}
+                                <div className={`h-40 w-full bg-slate-800 relative overflow-hidden`}>
+                                    {hackathon.thumbnail ? (
+                                        <img src={hackathon.thumbnail} alt={hackathon.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-indigo-900 to-slate-900"></div>
+                                    )}
 
-                                <div className="flex justify-between items-start relative z-10">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md border border-white/20 shadow-lg ${hackathon.status === 'Live' ? 'bg-red-500/80 text-white animate-pulse' :
-                                        hackathon.status === 'Upcoming' ? 'bg-blue-500/80 text-white' : 'bg-slate-600/80 text-slate-200'
-                                        }`}>
-                                        {hackathon.status}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors line-clamp-1">{hackathon.title}</h3>
-                                        <p className="text-slate-400 text-sm line-clamp-2">{hackathon.description}</p>
-                                    </div>
-                                </div>
-
-                                {/* Details */}
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                        <Trophy size={16} className="text-yellow-500" />
-                                        <span className="font-semibold text-slate-200">{hackathon.prize}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                        <Users size={16} className="text-blue-400" />
-                                        <span>{hackathon.participants} Enrolled</span>
-                                    </div>
-                                    <div className="col-span-2 flex items-center gap-2 text-slate-400 text-sm">
-                                        <Calendar size={16} />
-                                        <span>{hackathon.date}</span>
-                                    </div>
-                                </div>
-
-                                {/* Tags */}
-                                <div className="flex flex-wrap gap-2 mb-6">
-                                    {hackathon.tags.map(tag => (
-                                        <span key={tag} className="text-xs font-medium px-2.5 py-1 rounded-md bg-white/5 text-slate-400 border border-white/5">
-                                            {tag}
+                                    <div className="flex justify-between items-start relative z-10 p-4">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md border border-white/20 shadow-lg capitalize ${hackathon.status === 'live' ? 'bg-red-500/80 text-white animate-pulse' :
+                                                hackathon.status === 'upcoming' ? 'bg-blue-500/80 text-white' : 'bg-slate-600/80 text-slate-200'
+                                            }`}>
+                                            {hackathon.status}
                                         </span>
-                                    ))}
+                                    </div>
                                 </div>
 
-                                {/* Action */}
-                                <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-indigo-600 hover:border-indigo-600 transition-all group-hover:shadow-lg flex items-center justify-center gap-2">
-                                    View Details <ArrowRight size={16} />
-                                </button>
+                                {/* Content */}
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors line-clamp-1">{hackathon.title}</h3>
+                                            <p className="text-slate-400 text-sm line-clamp-2">{hackathon.description}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Details */}
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div className="flex items-center gap-2 text-slate-400 text-sm">
+                                            <Trophy size={16} className="text-yellow-500" />
+                                            <span className="font-semibold text-slate-200">{hackathon.prizePool || 'TBD'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-400 text-sm">
+                                            <Users size={16} className="text-blue-400" />
+                                            <span>{hackathon.participantCount || 0} Joined</span>
+                                        </div>
+                                        <div className="col-span-2 flex items-center gap-2 text-slate-400 text-sm">
+                                            <Calendar size={16} />
+                                            <span>{new Date(hackathon.startDate).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Action */}
+                                    <button
+                                        onClick={() => navigate(`/competition/${hackathon._id}`)}
+                                        className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-indigo-600 hover:border-indigo-600 transition-all group-hover:shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        View Details <ArrowRight size={16} />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {filteredHackathons.length === 0 && (
+                {!loading && filteredHackathons.length === 0 && (
                     <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5 border-dashed">
                         <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Search className="text-slate-500" />
@@ -224,7 +214,7 @@ const HackathonList = () => {
                         <h3 className="text-xl font-bold text-white mb-2">No hackathons found</h3>
                         <p className="text-slate-400">Try adjusting your filters or search criteria.</p>
                         <button
-                            onClick={() => setFilter('All')}
+                            onClick={() => { setFilter('All'); setSearchTerm(''); }}
                             className="mt-6 px-6 py-2 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
                         >
                             Clear Filters

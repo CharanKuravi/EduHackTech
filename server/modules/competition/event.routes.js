@@ -7,17 +7,23 @@ const {
     getEvent,
     createEvent,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    registerForEvent,
+    getEventRegistrations
 } = require('./event.controller');
 
 // Public Routes
 router.get('/', getEvents);
 router.get('/:id', getEvent);
 
-// Admin Routes (Protected)
+// Protected Routes (User/Organizer)
+router.post('/', protect, createEvent); // Create Event (Organizer)
+router.put('/:id', protect, updateEvent); // Update (Organizer/Admin)
+router.delete('/:id', protect, deleteEvent); // Delete (Organizer/Admin)
+router.post('/:id/register', protect, registerForEvent); // Register (User)
+router.get('/:id/registrations', protect, getEventRegistrations); // View Registrations (Organizer/Admin)
+
+// Admin Routes (Specific God Mode lists if needed, but getAllEventsAdmin is specialized)
 router.get('/admin/all', protect, authorize('admin'), getAllEventsAdmin);
-router.post('/admin', protect, authorize('admin'), createEvent);
-router.put('/admin/:id', protect, authorize('admin'), updateEvent);
-router.delete('/admin/:id', protect, authorize('admin'), deleteEvent);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Trophy, Settings, ChevronLeft, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Trophy, Settings, ChevronLeft, Users, LogOut, Code } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
 const AdminSidebar = ({ collapsed, setCollapsed }) => {
@@ -10,6 +10,7 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
         { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
         { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
         { path: '/admin/events', icon: Trophy, label: 'Events' },
+        { path: '/admin/challenges', icon: Code, label: 'Challenges' },
         { path: '/admin/users', icon: Users, label: 'Users' },
         { path: '/admin/settings', icon: Settings, label: 'Settings' },
     ];
