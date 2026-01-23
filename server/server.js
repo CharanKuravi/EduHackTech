@@ -42,6 +42,7 @@ app.use('/api/events', require('./modules/competition/event.routes'));
 app.use('/api/enrollments', require('./modules/learning/enrollment.routes'));
 app.use('/api/admin', require('./modules/admin/admin.routes'));
 app.use('/api/challenges', require('./modules/competition/challenge.routes'));
+app.use('/api/notifications', require('./modules/notification/notification.routes'));
 
 // Example of a Protected Route (For Testing)
 // We will move this to a proper module later

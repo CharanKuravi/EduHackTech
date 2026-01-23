@@ -1,5 +1,6 @@
 const Enrollment = require('./enrollment.model');
 const Course = require('./course.model');
+const { createNotificationForUser } = require('../notification/notification.controller');
 
 // @desc    Enroll user in a course
 // @route   POST /api/enrollments/:courseId
@@ -29,6 +30,20 @@ exports.enrollInCourse = async (req, res) => {
 
         // Increment enrolled count on course
         await Course.findByIdAndUpdate(courseId, { $inc: { enrolledCount: 1 } });
+
+        // Create notification for the user
+        try {
+            await createNotificationForUser(
+                userId,
+                'success',
+                'Enrollment Confirmed! 🎉',
+                `You've successfully enrolled in "${course.title}". Start learning now!`,
+                `/course/${courseId}/learn`
+            );
+        } catch (notifError) {
+            console.error('Failed to create notification:', notifError);
+            // Don't fail the enrollment if notification fails
+        }
 
         res.status(201).json({ success: true, data: enrollment });
     } catch (error) {

@@ -18,59 +18,24 @@ import {
   Info,
   X,
   Sparkles,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  formatRelativeTime,
+} from "../../services/notification.service";
 import "./Navbar.css";
 import logo from "../assets/EduhackTech.jpeg";
 
-// Sample notifications data - in production, this would come from an API
-const sampleNotifications = [
-  {
-    id: 1,
-    type: "success",
-    title: "Registration Confirmed",
-    message: "You've successfully registered for TechHack 2026!",
-    time: "2 min ago",
-    isRead: false,
-  },
-  {
-    id: 2,
-    type: "info",
-    title: "New Course Available",
-    message: "Advanced React Patterns is now live. Start learning today!",
-    time: "1 hour ago",
-    isRead: false,
-  },
-  {
-    id: 3,
-    type: "warning",
-    title: "Deadline Approaching",
-    message: "Your hackathon submission is due in 24 hours.",
-    time: "3 hours ago",
-    isRead: true,
-  },
-  {
-    id: 4,
-    type: "info",
-    title: "Team Invitation",
-    message: "Alex invited you to join 'Code Warriors' team.",
-    time: "Yesterday",
-    isRead: true,
-  },
-  {
-    id: 5,
-    type: "success",
-    title: "Achievement Unlocked",
-    message: "Congratulations! You've earned the 'Fast Learner' badge.",
-    time: "2 days ago",
-    isRead: true,
-  },
-];
-
 const Navbar = () => {
   const { mode, toggleMode, primary, bgLight } = useTheme();
-  const { user, logoutUser } = useAuth();
+  const { user, token, logoutUser } = useAuth();
   const navigate = useNavigate();
 
   const handleModeToggle = () => {
@@ -85,10 +50,10 @@ const Navbar = () => {
 
   // Notification State
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState(sampleNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
   const notificationRef = useRef(null);
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Search Logic
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,28 +89,94 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch notifications when panel opens or on initial load
+  const fetchNotifications = async () => {
+    if (!token) return;
+
+    setNotifLoading(true);
+    try {
+      const response = await getNotifications(token);
+      if (response.success) {
+        setNotifications(response.data);
+        setUnreadCount(response.unreadCount);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (isNotificationOpen && token) {
+      fetchNotifications();
+    }
+  }, [isNotificationOpen, token]);
+
+  // Also fetch on component mount if user is logged in
+  useEffect(() => {
+    if (user && token) {
+      fetchNotifications();
+    }
+  }, [user, token]);
+
   const handleLogout = () => {
     logoutUser();
     setIsProfileOpen(false);
     navigate("/");
   };
 
-  // Mark notification as read
-  const markAsRead = (id) => {
+  // Mark notification as read (API)
+  const markAsRead = async (id) => {
+    // Optimistic update
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
     );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+
+    try {
+      await markNotificationAsRead(id, token);
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+      // Revert on error
+      fetchNotifications();
+    }
   };
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
+  // Mark all notifications as read (API)
+  const markAllAsRead = async () => {
+    // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+
+    try {
+      await markAllNotificationsAsRead(token);
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      // Revert on error
+      fetchNotifications();
+    }
   };
 
-  // Remove notification
-  const removeNotification = (id, e) => {
+  // Remove notification (API)
+  const removeNotification = async (id, e) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+    // Optimistic update
+    const wasUnread = notifications.find((n) => n._id === id && !n.isRead);
+    setNotifications((prev) => prev.filter((n) => n._id !== id));
+    if (wasUnread) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+
+    try {
+      await deleteNotification(id, token);
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      // Revert on error
+      fetchNotifications();
+    }
   };
 
   // Get notification icon based on type
@@ -155,6 +186,8 @@ const Navbar = () => {
         return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
       case "warning":
         return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case "error":
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
       case "info":
       default:
         return <Info className="w-5 h-5 text-blue-500" />;
@@ -298,11 +331,16 @@ const Navbar = () => {
 
                     {/* Notification List */}
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                      {notifications.length > 0 ? (
+                      {notifLoading ? (
+                        // Loading State
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                        </div>
+                      ) : notifications.length > 0 ? (
                         notifications.map((notification) => (
                           <div
-                            key={notification.id}
-                            onClick={() => markAsRead(notification.id)}
+                            key={notification._id}
+                            onClick={() => markAsRead(notification._id)}
                             className={`group relative px-5 py-4 border-b border-gray-50/50 hover:bg-white/60 cursor-pointer transition-all duration-200 ${!notification.isRead
                               ? "bg-blue-50/30"
                               : ""
@@ -314,7 +352,9 @@ const Navbar = () => {
                                 ? "bg-emerald-50"
                                 : notification.type === "warning"
                                   ? "bg-amber-50"
-                                  : "bg-blue-50"
+                                  : notification.type === "error"
+                                    ? "bg-red-50"
+                                    : "bg-blue-50"
                                 }`}>
                                 {getNotificationIcon(notification.type)}
                               </div>
@@ -334,13 +374,13 @@ const Navbar = () => {
                                   {notification.message}
                                 </p>
                                 <p className="text-[10px] text-gray-400 mt-1.5 font-medium uppercase tracking-wide">
-                                  {notification.time}
+                                  {formatRelativeTime(notification.createdAt)}
                                 </p>
                               </div>
 
                               {/* Remove Button */}
                               <button
-                                onClick={(e) => removeNotification(notification.id, e)}
+                                onClick={(e) => removeNotification(notification._id, e)}
                                 className="absolute top-3 right-3 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all duration-200 text-gray-400 hover:text-gray-600"
                               >
                                 <X className="w-3.5 h-3.5" />

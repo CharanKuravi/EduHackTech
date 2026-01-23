@@ -1,5 +1,6 @@
 const Event = require('./event.model');
 const Registration = require('./registration.model');
+const { createNotificationForUser } = require('../notification/notification.controller');
 
 // @desc    Get all public events (upcoming/live)
 // @route   GET /api/events
@@ -129,6 +130,20 @@ exports.registerForEvent = async (req, res) => {
         // Increment count
         event.participantCount = (event.participantCount || 0) + 1;
         await event.save();
+
+        // Create notification for the user
+        try {
+            await createNotificationForUser(
+                req.user.id,
+                'success',
+                'Registration Confirmed! 🎯',
+                `You're registered for "${event.title}". Good luck!`,
+                `/event/${req.params.id}`
+            );
+        } catch (notifError) {
+            console.error('Failed to create notification:', notifError);
+            // Don't fail the registration if notification fails
+        }
 
         res.status(201).json({ success: true, data: registration });
     } catch (error) {

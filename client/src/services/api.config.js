@@ -49,6 +49,14 @@ const API_CONFIG = {
             register: (id) => `/events/${id}/register`,
             registrations: (id) => `/events/${id}/registrations`,
         },
+        // Notifications
+        notifications: {
+            list: '/notifications',
+            markRead: (id) => `/notifications/${id}/read`,
+            markAllRead: '/notifications/read-all',
+            delete: (id) => `/notifications/${id}`,
+            create: '/notifications',
+        },
     },
 };
 

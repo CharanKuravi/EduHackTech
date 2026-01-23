@@ -116,6 +116,20 @@ exports.register = async (req, res) => {
       expiresIn: '30d'
     });
 
+    // 6. Create welcome notification
+    try {
+      const { createNotificationForUser } = require('../notification/notification.controller');
+      await createNotificationForUser(
+        user._id,
+        'success',
+        'Welcome to EduHackTech! 🚀',
+        `Hi ${name}! Your account is ready. Explore courses and hackathons to start your journey!`,
+        '/learning'
+      );
+    } catch (notifError) {
+      console.error('Failed to create welcome notification:', notifError);
+    }
+
     res.status(201).json({
       success: true,
       token,
