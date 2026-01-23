@@ -21,6 +21,11 @@ app.use(helmet());       // Security Headers
 app.use(morgan('dev'));  // Logging
 
 // --- ROUTES ---
+// Health check / root route
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'EduHackTech API is running!' });
+});
+
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/courses', require('./modules/learning/course.routes'));
 app.use('/api/events', require('./modules/competition/event.routes'));
