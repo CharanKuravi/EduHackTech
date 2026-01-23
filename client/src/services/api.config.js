@@ -3,9 +3,15 @@
  * Centralized configuration for all API endpoints and settings
  */
 
+// Helper to remove trailing slashes from URL
+const getBaseUrl = () => {
+    const url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    return url.replace(/\/+$/, ''); // Remove trailing slashes
+};
+
 const API_CONFIG = {
-    // Base URL - can be changed via environment variable
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    // Base URL - can be changed via environment variable (trailing slashes removed)
+    baseUrl: getBaseUrl(),
 
     // Timeout for requests (in ms)
     timeout: 10000,

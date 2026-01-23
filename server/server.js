@@ -13,10 +13,20 @@ connectDB();
 
 const app = express();
 
+// --- CORS CONFIGURATION ---
+const corsOptions = {
+  origin: ['https://edu-hack-tech.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200 // Important for legacy browser support and Vercel
+};
+
 // --- MIDDLEWARES ---
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 app.use(express.json({ limit: '50mb' })); // Body parser with increased limit for base64 images
 app.use(express.urlencoded({ extended: true, limit: '50mb' })); // URL Encoded parser with limit
-app.use(cors());         // Enable CORS
 app.use(helmet());       // Security Headers
 app.use(morgan('dev'));  // Logging
 
