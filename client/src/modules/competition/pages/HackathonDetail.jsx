@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Users, Trophy, Flag, Clock, ArrowLeft, Share2, CheckCircle, Edit, X } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Calendar, MapPin, Users, Trophy, Flag, Clock, ArrowLeft, Share2, CheckCircle, Edit, X, AlertCircle, CreditCard, FileText } from 'lucide-react';
 import { getEvent, registerForEvent, updateEvent, checkUserRegistration } from '../../../services/event.service';
 import { useAuth } from '../../../context/AuthContext';
 import TeamRegistrationModal from '../../../components/competition/TeamRegistrationModal';
@@ -8,15 +8,18 @@ import TeamRegistrationModal from '../../../components/competition/TeamRegistrat
 const HackathonDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, token } = useAuth();
 
     const [hackathon, setHackathon] = useState(null);
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
     const [registered, setRegistered] = useState(false);
+    const [registration, setRegistration] = useState(null); // Store full registration data
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState({});
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Populate form when editing starts
     const handleEditClick = () => {
@@ -51,6 +54,17 @@ const HackathonDetail = () => {
     };
 
     useEffect(() => {
+        // Show success message from navigation state
+        if (location.state?.registrationSuccess) {
+            const hasFee = location.state?.hasFee;
+            setSuccessMessage(hasFee
+                ? 'Registration submitted! Your problem statement is under review.'
+                : 'Registration successful!'
+            );
+            // Clear the state
+            window.history.replaceState({}, document.title);
+        }
+
         const load = async () => {
             try {
                 const data = await getEvent(id);
@@ -62,6 +76,7 @@ const HackathonDetail = () => {
                         const regStatus = await checkUserRegistration(id, token);
                         if (regStatus.isRegistered) {
                             setRegistered(true);
+                            setRegistration(regStatus.registration);
                         }
                     } catch (err) {
                         // User not registered or error checking
@@ -75,7 +90,7 @@ const HackathonDetail = () => {
             }
         };
         load();
-    }, [id, user, token]);
+    }, [id, user, token, location.state]);
 
     // Open registration modal or redirect
     const handleRegisterClick = () => {
@@ -83,15 +98,8 @@ const HackathonDetail = () => {
             navigate('/login');
             return;
         }
-
-        // If paid event, redirect to payment page
-        if (hackathon.registrationFee && hackathon.registrationFee > 0) {
-            navigate(`/competition/${id}/payment`);
-            return;
-        }
-
-        // Free event - open registration modal
-        setShowRegistrationModal(true);
+        // Navigate to registration page for all events
+        navigate(`/competition/${id}/register`);
     };
 
     // Handle actual registration submission from modal
@@ -217,6 +225,13 @@ const HackathonDetail = () => {
                             </div>
                         </div>
 
+                        {/* Success Message */}
+                        {successMessage && (
+                            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm text-center">
+                                {successMessage}
+                            </div>
+                        )}
+
                         {!registered ? (
                             <div className="space-y-4">
                                 <button
@@ -224,19 +239,75 @@ const HackathonDetail = () => {
                                     disabled={registering}
                                     className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2"
                                 >
-                                    {registering ? 'Processing...' : (
-                                        hackathon.registrationFee && hackathon.registrationFee > 0
-                                            ? `Pay ₹${hackathon.registrationFee} & Register`
-                                            : 'Register Your Team'
-                                    )}
+                                    {registering ? 'Processing...' : 'Register Your Team'}
                                 </button>
                                 <p className="text-xs text-center text-slate-400">By registering, you agree to the rules.</p>
                             </div>
                         ) : (
-                            <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 text-center">
-                                <CheckCircle className="mx-auto text-green-400 mb-2" size={32} />
-                                <h4 className="font-bold text-green-100">Team Registered!</h4>
-                                <p className="text-sm text-green-200/70 mt-1">Check your notifications for details.</p>
+                            <div className="space-y-4">
+                                {/* Check problem statement status for paid events */}
+                                {registration?.problemStatement?.status === 'pending_review' && (
+                                    <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl p-4 text-center">
+                                        <Clock className="mx-auto text-amber-400 mb-2" size={32} />
+                                        <h4 className="font-bold text-amber-100">Under Review</h4>
+                                        <p className="text-sm text-amber-200/70 mt-1">Your problem statement is being reviewed by the admin.</p>
+                                    </div>
+                                )}
+
+                                {registration?.problemStatement?.status === 'approved' && registration?.paymentStatus === 'pending' && (
+                                    <div className="space-y-3">
+                                        <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 text-center">
+                                            <CheckCircle className="mx-auto text-green-400 mb-2" size={32} />
+                                            <h4 className="font-bold text-green-100">Problem Statement Approved!</h4>
+                                            <p className="text-sm text-green-200/70 mt-1">Proceed to payment to complete registration.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => navigate(`/competition/${id}/payment`)}
+                                            className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold shadow-lg shadow-green-600/25 transition flex items-center justify-center gap-2"
+                                        >
+                                            <CreditCard size={20} /> Pay ₹{hackathon.registrationFee}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {registration?.problemStatement?.status === 'rejected' && (
+                                    <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4">
+                                        <div className="text-center mb-3">
+                                            <AlertCircle className="mx-auto text-red-400 mb-2" size={32} />
+                                            <h4 className="font-bold text-red-100">Problem Statement Rejected</h4>
+                                        </div>
+                                        {registration.problemStatement.adminRemarks && (
+                                            <div className="bg-slate-800/50 rounded-lg p-3 mb-3">
+                                                <p className="text-xs text-slate-400 mb-1">Admin Feedback:</p>
+                                                <p className="text-sm text-red-200">{registration.problemStatement.adminRemarks}</p>
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => navigate(`/competition/${id}/register`)}
+                                            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition flex items-center justify-center gap-2"
+                                        >
+                                            <FileText size={18} /> Resubmit Problem Statement
+                                        </button>
+                                    </div>
+                                )}
+
+                                {(registration?.paymentStatus === 'completed' || registration?.paymentStatus === 'not_required') && (
+                                    <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 text-center">
+                                        <CheckCircle className="mx-auto text-green-400 mb-2" size={32} />
+                                        <h4 className="font-bold text-green-100">Registration Complete! 🎉</h4>
+                                        <p className="text-sm text-green-200/70 mt-1">Team: {registration?.teamName}</p>
+                                        <p className="text-xs text-slate-400 mt-2">Check your notifications for updates.</p>
+                                    </div>
+                                )}
+
+                                {/* Fallback for simple registration without problem statement */}
+                                {!registration?.problemStatement?.status && registration?.paymentStatus !== 'completed' && registration?.paymentStatus !== 'not_required' && (
+                                    <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 text-center">
+                                        <CheckCircle className="mx-auto text-green-400 mb-2" size={32} />
+                                        <h4 className="font-bold text-green-100">Team Registered!</h4>
+                                        <p className="text-sm text-green-200/70 mt-1">Check your notifications for details.</p>
+                                    </div>
+                                )}
                             </div>
                         )}
 

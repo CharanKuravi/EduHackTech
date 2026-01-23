@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CreditCard, Smartphone, Building2, ShieldCheck, Lock, CheckCircle2, ArrowLeft, Trophy, Calendar } from 'lucide-react';
-import { getEvent, registerForEvent } from '../../../services/event.service';
+import { CreditCard, Smartphone, Building2, ShieldCheck, Lock, CheckCircle2, ArrowLeft, Trophy, Calendar, AlertCircle } from 'lucide-react';
+import { getEvent, checkUserRegistration, completePayment } from '../../../services/event.service';
 import { useAuth } from '../../../context/AuthContext';
 
 const EventPayment = () => {
@@ -10,29 +10,55 @@ const EventPayment = () => {
     const { user, token } = useAuth();
 
     const [event, setEvent] = useState(null);
+    const [registration, setRegistration] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('card');
-    const [teamName, setTeamName] = useState('');
     const [paymentSuccess, setPaymentSuccess] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        const loadEvent = async () => {
+        const loadData = async () => {
             try {
-                const data = await getEvent(id);
-                setEvent(data);
-                if (data?.registrationFee === 0) {
-                    // Free event, redirect back
+                const eventData = await getEvent(id);
+                setEvent(eventData);
+
+                if (eventData?.registrationFee === 0) {
                     navigate(`/competition/${id}`);
+                    return;
+                }
+
+                // Check registration and approval status
+                if (user && token) {
+                    const regStatus = await checkUserRegistration(id, token);
+                    if (!regStatus.isRegistered) {
+                        setError('You need to register first');
+                        return;
+                    }
+
+                    setRegistration(regStatus.registration);
+
+                    // Check if already paid
+                    if (regStatus.registration?.paymentStatus === 'completed') {
+                        setPaymentSuccess(true);
+                        return;
+                    }
+
+                    // Check if problem statement is approved
+                    if (regStatus.registration?.problemStatement?.status !== 'approved') {
+                        setError('Your problem statement must be approved before payment');
+                        return;
+                    }
                 }
             } catch (err) {
                 console.error(err);
+                setError('Failed to load event data');
             } finally {
                 setLoading(false);
             }
         };
-        loadEvent();
-    }, [id, navigate]);
+        loadData();
+    }, [id, navigate, user, token]);
 
     const handlePayment = async () => {
         if (!user) {
@@ -41,11 +67,11 @@ const EventPayment = () => {
         }
         setProcessing(true);
         try {
-            // Mock payment - in production, integrate real gateway
+            // Mock payment delay - in production, integrate real gateway
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // Register after payment
-            await registerForEvent(id, { teamName: teamName || user.name, paymentCompleted: true }, token);
+            // Complete payment via API
+            await completePayment(id, token);
             setPaymentSuccess(true);
         } catch (error) {
             alert('Payment failed: ' + (error.response?.data?.message || error.message));
@@ -56,6 +82,27 @@ const EventPayment = () => {
 
     if (loading) return <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">Loading...</div>;
     if (!event) return <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">Event not found</div>;
+
+    // Error Screen (not registered or not approved)
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-[#020617] to-[#0f172a] flex items-center justify-center px-4 py-12">
+                <div className="bg-slate-900/80 backdrop-blur-xl w-full max-w-lg rounded-3xl shadow-2xl border border-slate-800 p-10 text-center">
+                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="w-10 h-10 text-red-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Cannot Process Payment</h2>
+                    <p className="text-slate-400 mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate(`/competition/${id}`)}
+                        className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition"
+                    >
+                        Go Back to Event
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Payment Success Screen
     if (paymentSuccess) {
@@ -75,7 +122,7 @@ const EventPayment = () => {
                         </div>
                         <div className="flex justify-between text-sm mb-2">
                             <span className="text-slate-400">Team Name</span>
-                            <span className="text-white">{teamName || user?.name || 'Individual'}</span>
+                            <span className="text-white">{registration?.teamName || 'Your Team'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-slate-400">Event Date</span>
@@ -126,19 +173,7 @@ const EventPayment = () => {
                 {/* RIGHT — PAYMENT FORM */}
                 <div className="p-10 bg-slate-900">
                     <h3 className="text-2xl font-bold text-white">Payment Details</h3>
-                    <p className="text-sm text-slate-400 mt-1">Complete payment to register</p>
-
-                    {/* Team Name */}
-                    <div className="mt-6">
-                        <label className="text-sm font-medium text-slate-300">Team Name (Optional)</label>
-                        <input
-                            type="text"
-                            value={teamName}
-                            onChange={(e) => setTeamName(e.target.value)}
-                            placeholder="e.g. Code Ninjas"
-                            className="mt-1 w-full border border-slate-700 bg-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
+                    <p className="text-sm text-slate-400 mt-1">Complete payment for <span className="text-white">{registration?.teamName || 'your team'}</span></p>
 
                     {/* Payment Method Selection */}
                     <div className="mt-6">
