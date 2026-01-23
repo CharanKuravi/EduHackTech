@@ -16,7 +16,10 @@ const {
     updateRegistrationStatus,
     getMyRegistrations,
     unregisterFromEvent,
-    updateMyRegistration
+    updateMyRegistration,
+    reviewProblemStatement,
+    resubmitProblemStatement,
+    completePayment
 } = require('./event.controller');
 
 // Public Routes
@@ -38,6 +41,11 @@ router.get('/:id/check-registration', protect, checkUserRegistration); // Check 
 router.get('/:id/registrations', protect, getEventRegistrations); // View Registrations (Organizer/Admin)
 router.delete('/:id/registrations/:regId', protect, deleteRegistration); // Cancel Registration (Admin/Organizer)
 router.put('/:id/registrations/:regId/status', protect, updateRegistrationStatus); // Update registration status
+
+// Problem Statement Workflow Routes
+router.put('/:id/registrations/:regId/review-problem', protect, reviewProblemStatement); // Admin review
+router.put('/:id/resubmit-problem', protect, resubmitProblemStatement); // User resubmits after rejection
+router.put('/:id/complete-payment', protect, completePayment); // Complete payment after approval
 
 // Admin Routes (Specific God Mode lists if needed, but getAllEventsAdmin is specialized)
 router.get('/admin/all', protect, authorize('admin'), getAllEventsAdmin);

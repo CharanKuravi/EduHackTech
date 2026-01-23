@@ -167,53 +167,105 @@ const ManageEvents = () => {
                         className="w-full pl-11 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+                <div className="space-y-4">
                     {loading ? (
                         <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
                     ) : filteredEvents.length === 0 ? (
-                        <div className="text-center py-20 text-slate-500">No events found. Click "Create Event" to add one.</div>
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl text-center py-20 text-slate-500">No events found. Click "Create Event" to add one.</div>
                     ) : (
-                        <table className="w-full">
-                            <thead className="bg-slate-800/50 text-left text-sm text-slate-400 uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-6 py-4">Title</th>
-                                    <th className="px-6 py-4">Dates</th>
-                                    <th className="px-6 py-4">Prize</th>
-                                    <th className="px-6 py-4">Entry Fee</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800">
-                                {filteredEvents.map(event => (
-                                    <tr key={event._id} className="hover:bg-slate-800/30 transition">
-                                        <td className="px-6 py-4 font-medium text-white">{event.title}</td>
-                                        <td className="px-6 py-4 text-slate-400 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={14} />
-                                                {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+                        filteredEvents.map(event => {
+                            // Calculate registration stats
+                            const totalReg = event.participantCount || 0;
+                            const pendingReg = event.registrations?.filter(r => r.problemStatement?.status === 'pending_review' || r.status === 'pending').length || 0;
+                            const approvedReg = event.registrations?.filter(r => r.paymentStatus === 'completed' || r.status === 'approved').length || 0;
+
+                            return (
+                                <div key={event._id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                        {/* Left: Event Info */}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                {event.registrationFee > 0 && (
+                                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                                )}
+                                                <h3 className="text-xl font-bold text-white">{event.title}</h3>
+                                                <span className={`px-2 py-0.5 text-xs rounded-full capitalize ${getStatusColor(event.status)}`}>
+                                                    {event.status}
+                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-emerald-400 font-semibold">{event.prizePool}</td>
-                                        <td className="px-6 py-4">
-                                            {event.registrationFee > 0 ? (
-                                                <span className="text-yellow-400 font-semibold">₹{event.registrationFee}</span>
-                                            ) : (
-                                                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">FREE</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full capitalize ${getStatusColor(event.status)}`}>{event.status}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button onClick={() => fetchRegistrations(event._id)} className="p-2 mr-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition" title="View Registrations"><Users size={16} /></button>
-                                            <button onClick={() => openModal(event)} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition"><Pencil size={16} /></button>
-                                            <button onClick={() => deleteEvent(event._id)} className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition"><Trash2 size={16} /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            <p className="text-slate-400 text-sm mb-3 line-clamp-2">{event.description}</p>
+                                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar size={14} /> {new Date(event.startDate).toLocaleDateString()}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    💰 {event.registrationFee > 0 ? `₹${event.registrationFee}` : 'FREE'}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Users size={14} /> {totalReg} Participants
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Middle: Registration Stats */}
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-center px-4 py-2">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 mx-auto mb-1">
+                                                    <span className="text-blue-400 font-bold text-sm">{totalReg}</span>
+                                                </div>
+                                                <span className="text-xs text-slate-500">Total</span>
+                                            </div>
+                                            <div className="text-center px-4 py-2">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/30 mx-auto mb-1">
+                                                    <span className="text-yellow-400 font-bold text-sm">{pendingReg}</span>
+                                                </div>
+                                                <span className="text-xs text-slate-500">Pending</span>
+                                            </div>
+                                            <div className="text-center px-4 py-2">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 mx-auto mb-1">
+                                                    <span className="text-green-400 font-bold text-sm">{approvedReg}</span>
+                                                </div>
+                                                <span className="text-xs text-slate-500">Approved</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Actions */}
+                                        <div className="flex flex-col gap-2">
+                                            <a
+                                                href={`/my-events/${event._id}/registrations`}
+                                                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition text-sm"
+                                            >
+                                                <Users size={16} /> Manage Registrations
+                                            </a>
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={`/competition/${event._id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-1 px-3 py-2 text-center text-sm text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+                                                >
+                                                    › View Event
+                                                </a>
+                                                <button
+                                                    onClick={() => openModal(event)}
+                                                    className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteEvent(event._id)}
+                                                    className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </main>

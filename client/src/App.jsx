@@ -15,6 +15,7 @@ import CoursePlayer from "./modules/learning/pages/CoursePlayer";
 import HackathonList from "./modules/competition/pages/HackathonList";
 import OrganizeHackathon from "./modules/competition/pages/OrganizeHackathon";
 import HackathonDetail from "./modules/competition/pages/HackathonDetail";
+import HackathonRegistration from "./modules/competition/pages/HackathonRegistration";
 import EventPayment from "./modules/competition/pages/EventPayment";
 import MyEvents from "./modules/competition/pages/MyEvents";
 import EventRegistrations from "./modules/competition/pages/EventRegistrations";
@@ -80,6 +81,11 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/competition/:id" element={<HackathonDetail />} />
+              <Route path="/competition/:id/register" element={
+                <ProtectedRoute>
+                  <HackathonRegistration />
+                </ProtectedRoute>
+              } />
               <Route path="/competition/:id/payment" element={
                 <ProtectedRoute>
                   <EventPayment />

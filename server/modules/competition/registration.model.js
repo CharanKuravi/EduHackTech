@@ -68,6 +68,54 @@ const registrationSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
+    // Problem Statement for approval workflow
+    problemStatement: {
+        title: {
+            type: String,
+            trim: true,
+            maxlength: [200, 'Problem title cannot exceed 200 characters']
+        },
+        description: {
+            type: String,
+            trim: true,
+            maxlength: [2000, 'Problem description cannot exceed 2000 characters']
+        },
+        techStack: {
+            type: String,
+            trim: true,
+            maxlength: [500, 'Tech stack cannot exceed 500 characters']
+        },
+        status: {
+            type: String,
+            enum: ['pending_review', 'approved', 'rejected'],
+            default: 'pending_review'
+        },
+        adminRemarks: {
+            type: String,
+            trim: true,
+            maxlength: [500, 'Admin remarks cannot exceed 500 characters']
+        },
+        reviewedAt: {
+            type: Date
+        },
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
+    },
+    // Payment tracking
+    paymentStatus: {
+        type: String,
+        enum: ['not_required', 'pending', 'completed'],
+        default: 'pending'
+    },
+    paymentAmount: {
+        type: Number,
+        default: 0
+    },
+    paymentDate: {
+        type: Date
+    },
     submission: {
         type: String,
         default: ''

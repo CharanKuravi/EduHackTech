@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Download, CheckCircle, XCircle, Clock, Users, Loader2, RefreshCw } from 'lucide-react';
-import { getEvent, getEventRegistrations, updateRegistrationStatus, deleteRegistration } from '../../../services/event.service';
+import { ArrowLeft, Search, Download, CheckCircle, XCircle, Clock, Users, Loader2, RefreshCw, FileText, MessageSquare, X } from 'lucide-react';
+import { getEvent, getEventRegistrations, updateRegistrationStatus, deleteRegistration, reviewProblemStatement } from '../../../services/event.service';
 import { useAuth } from '../../../context/AuthContext';
 
 const EventRegistrations = () => {
@@ -15,6 +15,11 @@ const EventRegistrations = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [updating, setUpdating] = useState(null);
+
+    // Problem statement review modal state
+    const [showProblemModal, setShowProblemModal] = useState(null);
+    const [showRejectModal, setShowRejectModal] = useState(null);
+    const [rejectRemarks, setRejectRemarks] = useState('');
 
     useEffect(() => {
         if (!user) {
@@ -52,6 +57,45 @@ const EventRegistrations = () => {
             );
         } catch (err) {
             alert('Failed to update status: ' + err.message);
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    // Problem statement review handlers
+    const handleApproveProblem = async (regId) => {
+        setUpdating(regId);
+        try {
+            await reviewProblemStatement(id, regId, 'approved', '', token);
+            setRegistrations(prev =>
+                prev.map(r => r._id === regId ? {
+                    ...r,
+                    problemStatement: { ...r.problemStatement, status: 'approved' }
+                } : r)
+            );
+            setShowProblemModal(null);
+        } catch (err) {
+            alert('Failed to approve: ' + err.message);
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    const handleRejectProblem = async () => {
+        if (!showRejectModal) return;
+        setUpdating(showRejectModal._id);
+        try {
+            await reviewProblemStatement(id, showRejectModal._id, 'rejected', rejectRemarks, token);
+            setRegistrations(prev =>
+                prev.map(r => r._id === showRejectModal._id ? {
+                    ...r,
+                    problemStatement: { ...r.problemStatement, status: 'rejected', adminRemarks: rejectRemarks }
+                } : r)
+            );
+            setShowRejectModal(null);
+            setRejectRemarks('');
+        } catch (err) {
+            alert('Failed to reject: ' + err.message);
         } finally {
             setUpdating(null);
         }
@@ -210,6 +254,7 @@ const EventRegistrations = () => {
                                     <tr>
                                         <th className="px-6 py-4">Team / User</th>
                                         <th className="px-6 py-4">Email</th>
+                                        <th className="px-6 py-4">Problem Statement</th>
                                         <th className="px-6 py-4">Registered</th>
                                         <th className="px-6 py-4">Status</th>
                                         <th className="px-6 py-4 text-right">Actions</th>
@@ -225,6 +270,21 @@ const EventRegistrations = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-slate-400">{reg.user?.email || '-'}</td>
+                                            <td className="px-6 py-4">
+                                                {reg.problemStatement?.title ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => setShowProblemModal(reg)}
+                                                            className="text-blue-400 hover:text-blue-300 text-sm underline flex items-center gap-1"
+                                                        >
+                                                            <FileText size={14} /> View
+                                                        </button>
+                                                        <ProblemStatusBadge status={reg.problemStatement?.status} />
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-500 text-sm">-</span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-slate-400 text-sm">
                                                 {new Date(reg.registeredAt).toLocaleDateString()}
                                             </td>
@@ -237,23 +297,47 @@ const EventRegistrations = () => {
                                                         <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                                                     ) : (
                                                         <>
-                                                            {reg.status !== 'approved' && (
-                                                                <button
-                                                                    onClick={() => handleStatusChange(reg._id, 'approved')}
-                                                                    className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition"
-                                                                    title="Approve"
-                                                                >
-                                                                    <CheckCircle size={18} />
-                                                                </button>
+                                                            {/* Problem Statement Actions */}
+                                                            {reg.problemStatement?.title && reg.problemStatement?.status === 'pending_review' && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleApproveProblem(reg._id)}
+                                                                        className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition"
+                                                                        title="Approve Problem Statement"
+                                                                    >
+                                                                        <CheckCircle size={18} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setShowRejectModal(reg)}
+                                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition"
+                                                                        title="Reject with Remarks"
+                                                                    >
+                                                                        <MessageSquare size={18} />
+                                                                    </button>
+                                                                </>
                                                             )}
-                                                            {reg.status !== 'rejected' && (
-                                                                <button
-                                                                    onClick={() => handleStatusChange(reg._id, 'rejected')}
-                                                                    className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition"
-                                                                    title="Reject"
-                                                                >
-                                                                    <XCircle size={18} />
-                                                                </button>
+                                                            {/* Registration Status Actions */}
+                                                            {!reg.problemStatement?.title && (
+                                                                <>
+                                                                    {reg.status !== 'approved' && (
+                                                                        <button
+                                                                            onClick={() => handleStatusChange(reg._id, 'approved')}
+                                                                            className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition"
+                                                                            title="Approve"
+                                                                        >
+                                                                            <CheckCircle size={18} />
+                                                                        </button>
+                                                                    )}
+                                                                    {reg.status !== 'rejected' && (
+                                                                        <button
+                                                                            onClick={() => handleStatusChange(reg._id, 'rejected')}
+                                                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition"
+                                                                            title="Reject"
+                                                                        >
+                                                                            <XCircle size={18} />
+                                                                        </button>
+                                                                    )}
+                                                                </>
                                                             )}
                                                             <button
                                                                 onClick={() => handleDelete(reg._id)}
@@ -274,6 +358,102 @@ const EventRegistrations = () => {
                     )}
                 </div>
             </div>
+
+            {/* Problem Statement View Modal */}
+            {showProblemModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Problem Statement</h2>
+                                <p className="text-blue-100 text-sm">Team: {showProblemModal.teamName}</p>
+                            </div>
+                            <button onClick={() => setShowProblemModal(null)} className="p-2 hover:bg-white/10 rounded-full">
+                                <X className="text-white" size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <p className="text-slate-400 text-xs mb-1">Title</p>
+                                <p className="text-white font-semibold">{showProblemModal.problemStatement?.title}</p>
+                            </div>
+                            <div className="mb-4">
+                                <p className="text-slate-400 text-xs mb-1">Description</p>
+                                <p className="text-slate-300 text-sm whitespace-pre-wrap">{showProblemModal.problemStatement?.description}</p>
+                            </div>
+                            {showProblemModal.problemStatement?.techStack && (
+                                <div className="mb-4">
+                                    <p className="text-slate-400 text-xs mb-1">Tech Stack</p>
+                                    <p className="text-slate-300 text-sm">{showProblemModal.problemStatement?.techStack}</p>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2 mb-6">
+                                <span className="text-slate-400 text-xs">Status:</span>
+                                <ProblemStatusBadge status={showProblemModal.problemStatement?.status} />
+                            </div>
+                            {showProblemModal.problemStatement?.status === 'pending_review' && (
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => handleApproveProblem(showProblemModal._id)}
+                                        disabled={updating === showProblemModal._id}
+                                        className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={18} /> Approve
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowRejectModal(showProblemModal); setShowProblemModal(null); }}
+                                        className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2"
+                                    >
+                                        <XCircle size={18} /> Reject
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejection Remarks Modal */}
+            {showRejectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl overflow-hidden">
+                        <div className="bg-red-600 px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-white">Reject Problem Statement</h2>
+                            <button onClick={() => { setShowRejectModal(null); setRejectRemarks(''); }} className="p-2 hover:bg-white/10 rounded-full">
+                                <X className="text-white" size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-slate-400 text-sm mb-4">
+                                Rejecting: <span className="text-white font-medium">{showRejectModal.problemStatement?.title}</span>
+                            </p>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Feedback for the team</label>
+                            <textarea
+                                value={rejectRemarks}
+                                onChange={(e) => setRejectRemarks(e.target.value)}
+                                rows={4}
+                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                                placeholder="Explain why the problem statement was rejected and what changes are needed..."
+                            />
+                            <div className="flex gap-3 mt-4">
+                                <button
+                                    onClick={() => { setShowRejectModal(null); setRejectRemarks(''); }}
+                                    className="flex-1 py-3 border border-slate-600 text-slate-300 font-bold rounded-xl transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleRejectProblem}
+                                    disabled={updating === showRejectModal._id}
+                                    className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition"
+                                >
+                                    {updating === showRejectModal._id ? 'Rejecting...' : 'Reject'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -305,4 +485,20 @@ const StatusBadge = ({ status }) => {
     );
 };
 
+const ProblemStatusBadge = ({ status }) => {
+    const config = {
+        pending_review: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Pending' },
+        approved: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', label: 'Approved' },
+        rejected: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', label: 'Rejected' }
+    };
+    const { bg, text, border, label } = config[status] || config.pending_review;
+
+    return (
+        <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${bg} ${text} ${border}`}>
+            {label}
+        </span>
+    );
+};
+
 export default EventRegistrations;
+

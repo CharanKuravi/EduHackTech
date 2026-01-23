@@ -122,7 +122,7 @@ exports.registerForEvent = async (req, res) => {
         }
 
         // Validate required fields
-        const { teamName, teamMembers, locality } = req.body;
+        const { teamName, teamMembers, locality, problemStatement } = req.body;
 
         if (!teamName || !teamName.trim()) {
             return res.status(400).json({ success: false, message: 'Team name is required' });
@@ -130,6 +130,16 @@ exports.registerForEvent = async (req, res) => {
 
         if (!teamMembers || !Array.isArray(teamMembers) || teamMembers.length === 0) {
             return res.status(400).json({ success: false, message: 'At least one team member is required' });
+        }
+
+        // Validate problem statement for paid events
+        if (event.registrationFee && event.registrationFee > 0) {
+            if (!problemStatement || !problemStatement.title || !problemStatement.title.trim()) {
+                return res.status(400).json({ success: false, message: 'Problem statement title is required' });
+            }
+            if (!problemStatement.description || !problemStatement.description.trim()) {
+                return res.status(400).json({ success: false, message: 'Problem statement description is required' });
+            }
         }
 
         // Validate team size against event limits
@@ -181,12 +191,24 @@ exports.registerForEvent = async (req, res) => {
             role: index === 0 ? 'leader' : 'member'
         }));
 
+        // Determine payment status
+        const hasFee = event.registrationFee && event.registrationFee > 0;
+        const paymentStatus = hasFee ? 'pending' : 'not_required';
+
         const registration = await Registration.create({
             event: req.params.id,
             user: req.user.id,
             teamName: teamName.trim(),
             teamMembers: processedMembers,
-            locality: locality || {}
+            locality: locality || {},
+            problemStatement: problemStatement ? {
+                title: problemStatement.title?.trim() || '',
+                description: problemStatement.description?.trim() || '',
+                techStack: problemStatement.techStack?.trim() || '',
+                status: 'pending_review'
+            } : undefined,
+            paymentStatus,
+            paymentAmount: hasFee ? event.registrationFee : 0
         });
 
         // Increment participant count
@@ -195,12 +217,16 @@ exports.registerForEvent = async (req, res) => {
 
         // Create notification for the user
         try {
+            const message = hasFee
+                ? `Team "${teamName}" registered for "${event.title}". Your problem statement is under review. You can pay after approval.`
+                : `Team "${teamName}" is registered for "${event.title}". Good luck!`;
+
             await createNotificationForUser(
                 req.user.id,
-                'success',
-                'Registration Confirmed! 🎯',
-                `Team "${teamName}" is registered for "${event.title}". Good luck!`,
-                `/event/${req.params.id}`
+                'info',
+                hasFee ? 'Registration Submitted! 📝' : 'Registration Confirmed! 🎯',
+                message,
+                `/competition/${req.params.id}`
             );
         } catch (notifError) {
             console.error('Failed to create notification:', notifError);
@@ -416,5 +442,190 @@ exports.updateMyRegistration = async (req, res) => {
         res.status(200).json({ success: true, data: registration });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Update failed', error: error.message });
+    }
+};
+
+// @desc    Admin reviews problem statement (approve/reject)
+// @route   PUT /api/events/:id/registrations/:regId/review-problem
+// @access  Private (Admin/Organizer)
+exports.reviewProblemStatement = async (req, res) => {
+    try {
+        const { status, remarks } = req.body;
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Use: approved or rejected'
+            });
+        }
+
+        const event = await Event.findById(req.params.id);
+        if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+
+        // Check auth - only admin or event creator
+        if (event.createdBy.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        const registration = await Registration.findById(req.params.regId).populate('user', 'name email');
+        if (!registration) {
+            return res.status(404).json({ success: false, message: 'Registration not found' });
+        }
+
+        // Update problem statement status
+        registration.problemStatement.status = status;
+        registration.problemStatement.reviewedAt = new Date();
+        registration.problemStatement.reviewedBy = req.user.id;
+
+        if (status === 'rejected' && remarks) {
+            registration.problemStatement.adminRemarks = remarks.trim();
+        } else {
+            registration.problemStatement.adminRemarks = '';
+        }
+
+        await registration.save();
+
+        // Send notification to user
+        try {
+            if (status === 'approved') {
+                await createNotificationForUser(
+                    registration.user._id,
+                    'success',
+                    'Problem Statement Approved! ✅',
+                    `Great news! Your problem statement for "${event.title}" has been approved. You can now proceed to payment.`,
+                    `/competition/${req.params.id}`
+                );
+            } else {
+                await createNotificationForUser(
+                    registration.user._id,
+                    'warning',
+                    'Problem Statement Needs Revision ⚠️',
+                    `Your problem statement for "${event.title}" needs changes. Feedback: ${remarks || 'Please improve your submission.'}`,
+                    `/competition/${req.params.id}`
+                );
+            }
+        } catch (notifError) {
+            console.error('Failed to create notification:', notifError);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Problem statement ${status}`,
+            data: registration
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Review failed', error: error.message });
+    }
+};
+
+// @desc    User resubmits problem statement after rejection
+// @route   PUT /api/events/:id/resubmit-problem
+// @access  Private
+exports.resubmitProblemStatement = async (req, res) => {
+    try {
+        const { problemStatement } = req.body;
+
+        if (!problemStatement || !problemStatement.title || !problemStatement.description) {
+            return res.status(400).json({
+                success: false,
+                message: 'Problem statement title and description are required'
+            });
+        }
+
+        const registration = await Registration.findOne({
+            event: req.params.id,
+            user: req.user.id
+        });
+
+        if (!registration) {
+            return res.status(404).json({ success: false, message: 'Registration not found' });
+        }
+
+        if (registration.problemStatement?.status !== 'rejected') {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only resubmit rejected problem statements'
+            });
+        }
+
+        registration.problemStatement = {
+            title: problemStatement.title.trim(),
+            description: problemStatement.description.trim(),
+            techStack: problemStatement.techStack?.trim() || '',
+            status: 'pending_review',
+            adminRemarks: ''
+        };
+
+        await registration.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Problem statement resubmitted for review',
+            data: registration
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Resubmit failed', error: error.message });
+    }
+};
+
+// @desc    Complete payment for registration
+// @route   PUT /api/events/:id/complete-payment
+// @access  Private
+exports.completePayment = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+
+        const registration = await Registration.findOne({
+            event: req.params.id,
+            user: req.user.id
+        });
+
+        if (!registration) {
+            return res.status(404).json({ success: false, message: 'Registration not found' });
+        }
+
+        // Check if problem statement is approved (for paid events)
+        if (registration.problemStatement?.status && registration.problemStatement.status !== 'approved') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot complete payment. Problem statement must be approved first.'
+            });
+        }
+
+        if (registration.paymentStatus === 'completed') {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment already completed'
+            });
+        }
+
+        // Mock payment processing - in production, integrate actual payment gateway
+        registration.paymentStatus = 'completed';
+        registration.paymentDate = new Date();
+        registration.status = 'approved';
+
+        await registration.save();
+
+        // Send confirmation notification
+        try {
+            await createNotificationForUser(
+                req.user.id,
+                'success',
+                'Payment Successful! 🎉',
+                `Your payment of ₹${registration.paymentAmount} for "${event.title}" is complete. You're all set!`,
+                `/competition/${req.params.id}`
+            );
+        } catch (notifError) {
+            console.error('Failed to create notification:', notifError);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Payment completed successfully',
+            data: registration
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Payment failed', error: error.message });
     }
 };

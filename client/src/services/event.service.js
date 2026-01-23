@@ -107,3 +107,35 @@ export const updateRegistrationStatus = async (eventId, regId, status, token) =>
     const response = await put(`${BASE_URL}/${eventId}/registrations/${regId}/status`, { status }, token);
     return response.data;
 };
+
+/**
+ * Review problem statement (Admin/Organizer)
+ */
+export const reviewProblemStatement = async (eventId, regId, status, remarks, token) => {
+    const response = await put(`${BASE_URL}/${eventId}/registrations/${regId}/review-problem`, { status, remarks }, token);
+    return response.data;
+};
+
+/**
+ * Resubmit problem statement after rejection (User)
+ */
+export const resubmitProblemStatement = async (eventId, problemStatement, token) => {
+    const response = await put(`${BASE_URL}/${eventId}/resubmit-problem`, { problemStatement }, token);
+    return response.data;
+};
+
+/**
+ * Complete payment (User)
+ */
+export const completePayment = async (eventId, token) => {
+    const response = await put(`${BASE_URL}/${eventId}/complete-payment`, {}, token);
+    return response.data;
+};
+
+/**
+ * Get user's registrations
+ */
+export const getMyRegistrations = async (token) => {
+    const response = await get(`${BASE_URL}/my-registrations`, token);
+    return response.data;
+};
