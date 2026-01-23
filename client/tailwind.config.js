@@ -31,11 +31,16 @@ export default {
       },
       animation: {
         fadeIn: 'fadeIn 0.5s ease-in-out',
+        shrink: 'shrink 4s linear forwards',
       },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        shrink: {
+          '0%': { width: '100%' },
+          '100%': { width: '0%' },
         },
       },
     },

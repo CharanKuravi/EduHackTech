@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { ArrowRight, Loader2, User, Key, Mail, ShieldCheck } from 'lucide-react';
@@ -18,6 +18,17 @@ const Login = () => {
     const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [displayOtp, setDisplayOtp] = useState(null);
+
+    // Auto-hide OTP toast after 4 seconds
+    useEffect(() => {
+        if (displayOtp) {
+            const timer = setTimeout(() => {
+                setDisplayOtp(null);
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [displayOtp]);
 
     // 1. Check Email Logic
     const handleCheckEmail = async (e) => {
@@ -52,11 +63,16 @@ const Login = () => {
 
     // Helper: Send OTP
     const sendOtpToUser = async () => {
-        await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.sendOtp}`, {
+        const res = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.auth.sendOtp}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
+        const data = await res.json();
+        // Display OTP toast for demo purposes
+        if (data.otp) {
+            setDisplayOtp(data.otp);
+        }
     };
 
     // 2. Handle Name Submit (For New Users)
@@ -130,6 +146,27 @@ const Login = () => {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[100px] animate-pulse delay-700"></div>
                 <div className="absolute top-[20%] left-[50%] w-[400px] h-[400px] bg-sky-500/10 rounded-full blur-[90px] animate-pulse delay-1000"></div>
             </div>
+
+            {/* Glassmorphism OTP Toast */}
+            {displayOtp && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
+                    <div className="px-6 py-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl shadow-blue-500/20">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                <Key className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-white/70 font-medium">Your OTP Code</p>
+                                <p className="text-2xl font-bold text-white tracking-[0.3em] font-mono">{displayOtp}</p>
+                            </div>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 animate-shrink"></div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Refined Card - Solid White, Professional */}
             <div className="relative z-10 w-full max-w-[420px] bg-white rounded-3xl shadow-2xl p-8 md:p-10 transition-all duration-300">

@@ -23,7 +23,8 @@ exports.sendOtp = async (req, res) => {
     console.log(`🔐 OTP for ${email}: ${otpCode}`);
     console.log(`=============================\n`);
 
-    res.json({ success: true, message: 'OTP sent to console' });
+    // Return OTP in response for demo purposes (Vercel has no console access)
+    res.json({ success: true, message: 'OTP sent successfully', otp: otpCode });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
