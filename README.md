@@ -111,4 +111,4 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 
 ---
 
-Made with ❤️ by the EduHack Tech Team
+Made with ❤️ by the EduHack Tech Team.
